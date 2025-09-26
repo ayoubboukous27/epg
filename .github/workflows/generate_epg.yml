@@ -1,4 +1,4 @@
-name: Generate EPG XML
+name: Generate EPG
 
 on:
   push:
@@ -14,21 +14,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        python-version: '3.x'
+        node-version: '20'
 
     - name: Install dependencies
-      run: python -m pip install --upgrade pip
+      run: npm install
 
-    - name: Generate EPG XML
-      run: python generate_epg.py
+    - name: Generate EPG
+      run: node generate_epg.js
 
-    - name: Commit and Push epg.xml
+    - name: Commit and push EPG
       run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "actions@github.com"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
         git add epg.xml
-        git commit -m "Auto-generate epg.xml" || echo "No changes to commit"
+        git commit -m "Update epg.xml [skip ci]" || echo "No changes to commit"
         git push
