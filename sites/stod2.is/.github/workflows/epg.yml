@@ -1,9 +1,13 @@
 name: Update Stod2 EPG
 
+# تشغيل workflow عند أي push على الفرع master أو يدويًا
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  push:
+    branches:
+      - master
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # يوميًا عند منتصف الليل بتوقيت UTC
 
 jobs:
   build:
