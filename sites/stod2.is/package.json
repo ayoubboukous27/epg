@@ -1,0 +1,13 @@
+{
+  "name": "stod2-epg",
+  "version": "1.0.0",
+  "scripts": {
+    "grab": "node ./grab.js",
+    "channels:parse": "node ./parse.js",
+    "test": "echo 'Testing EPG...' && exit 0"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "xml2js": "^0.4.23"
+  }
+}
