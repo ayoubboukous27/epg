@@ -4,26 +4,35 @@ const { create } = require('xmlbuilder2');
 
 const sitesDir = path.join(__dirname, 'sites');
 
-// إنشاء الجذر للـ XML
+// Create the XML root
 const root = create({ version: '1.0', encoding: 'UTF-8' }).ele('tv');
 
-// دالة لتحليل JS واستخراج القنوات
+/**
+ * Function to extract channels from JS files
+ * Converts JS to JSON safely to avoid using eval
+ */
 function extractChannelsFromJS(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
-    // نفترض أن الملف يحتوي على متغير JS باسم channels
-    const regex = /const channels\s*=\s*([\s\S]*?);/m;
+    const regex = /const channels\s*=\s*(\[[\s\S]*?\]);/m;
     const match = content.match(regex);
     if (!match) return [];
+
     let channels = [];
     try {
-        channels = eval(match[1]); // تحويل النص إلى كائن JS
+        // Convert JS object keys and quotes to valid JSON
+        let jsArray = match[1]
+            .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":') // keys to JSON keys
+            .replace(/'/g, '"') // single quotes to double quotes
+            .replace(/,\s*]/g, ']'); // remove trailing comma before array end
+
+        channels = JSON.parse(jsArray);
     } catch (e) {
-        console.error('خطأ في تحليل JS:', filePath, e);
+        console.error('Error parsing JS:', filePath, e);
     }
     return channels;
 }
 
-// المرور على كل مجلد فرعي
+// Loop through each subfolder in sites/
 fs.readdirSync(sitesDir).forEach(siteFolder => {
     const folderPath = path.join(sitesDir, siteFolder);
     if (fs.statSync(folderPath).isDirectory()) {
@@ -31,13 +40,29 @@ fs.readdirSync(sitesDir).forEach(siteFolder => {
         jsFiles.forEach(jsFile => {
             const jsPath = path.join(folderPath, jsFile);
             const channels = extractChannelsFromJS(jsPath);
+
             channels.forEach(ch => {
                 const chEle = root.ele('channel', { id: ch.name });
-                chEle.ele('display-name').txt(ch.name);
+                chEle.ele('display-name').txt(ch.name || '');
                 chEle.ele('icon').txt(ch.icon || '');
                 chEle.ele('url').txt(ch.url || '');
-                // إضافة البرامج إذا موجودة
-                if (ch.programs) {
+
+                // Add programs if available
+                if (ch.programs && Array.isArray(ch.programs)) {
                     ch.programs.forEach(p => {
                         root.ele('programme', {
-                            start: p.start
+                            start: p.start || '',
+                            stop: p.stop || '',
+                            channel: ch.name || ''
+                        }).ele('title').txt(p.title || '');
+                    });
+                }
+            });
+        });
+    }
+});
+
+// Write the final epg.xml
+const xml = root.end({ prettyPrint: true });
+fs.writeFileSync('epg.xml', xml);
+console.log('epg.xml has been successfully created!');
