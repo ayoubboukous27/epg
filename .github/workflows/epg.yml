@@ -1,0 +1,43 @@
+name: Update Stod2 EPG
+
+# تشغيل workflow عند أي push على الفرع master أو يدويًا
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # يوميًا عند منتصف الليل بتوقيت UTC
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Grab EPG
+        run: npm run grab --- --site=stod2.is
+
+      - name: Generate channels XML
+        run: npm run channels:parse --- --config=./sites/stod2.is/stod2.is.config.js --output=./sites/stod2.is/stod2.is.channels.xml
+
+      - name: Test EPG
+        run: npm test --- stod2.is
+
+      - name: Commit & Push XML
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'actions@github.com'
+          git add sites/stod2.is/stod2.is.channels.xml
+          git commit -m "Update EPG for stod2.is" || echo "No changes to commit"
+          git push
